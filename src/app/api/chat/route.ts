@@ -1,53 +1,62 @@
 import { NextRequest } from 'next/server'
 
+// Edge runtime streams reliably on Netlify/Vercel and has no ~10s serverless timeout.
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.com'
 const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { model, messages } = await request.json()
 
     if (!model || !messages) {
-      return new Response(JSON.stringify({ error: 'Missing model or messages' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return jsonError('Missing model or messages', 400)
     }
 
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    if (!OLLAMA_API_KEY) {
+      return jsonError('Server is missing OLLAMA_API_KEY. Set it in your hosting environment variables.', 500)
+    }
+
+    const upstream = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(OLLAMA_API_KEY && { Authorization: `Bearer ${OLLAMA_API_KEY}` }),
+        Authorization: `Bearer ${OLLAMA_API_KEY}`,
       },
-      body: JSON.stringify({
-        model,
-        messages,
-        stream: true,
-      }),
+      body: JSON.stringify({ model, messages, stream: true }),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Ollama API error:', errorText)
-      return new Response(JSON.stringify({ error: 'Ollama API error' }), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    if (!upstream.ok || !upstream.body) {
+      const errorText = await upstream.text().catch(() => '')
+      console.error('Ollama API error:', upstream.status, errorText)
+      return jsonError(`Ollama API error (${upstream.status})`, upstream.status || 502)
     }
 
-    // Create a TransformStream to convert Ollama's format to SSE
     const encoder = new TextEncoder()
     const decoder = new TextDecoder()
+    // Buffer across chunks: a single JSON object can be split across network chunks.
+    let buffer = ''
 
-    const transformStream = new TransformStream({
-      async transform(chunk, controller) {
-        const text = decoder.decode(chunk, { stream: true })
-        const lines = text.split('\n').filter((line) => line.trim())
+    const transform = new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
 
         for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
           try {
-            const json = JSON.parse(line)
+            const json = JSON.parse(trimmed)
             if (json.message?.content) {
               controller.enqueue(
                 encoder.encode(`data: ${JSON.stringify({ content: json.message.content })}\n\n`)
@@ -57,62 +66,37 @@ export async function POST(request: NextRequest) {
               controller.enqueue(encoder.encode('data: [DONE]\n\n'))
             }
           } catch {
-            // Skip non-JSON lines
+            // Skip partial/non-JSON lines
           }
         }
       },
-    })
-
-    const reader = response.body?.getReader()
-    const stream = new ReadableStream({
-      async start(controller) {
-        if (!reader) {
-          controller.close()
-          return
-        }
-
-        const writer = transformStream.writable.getWriter()
-        const transformReader = transformStream.readable.getReader()
-
-        // Pipe transformed data to output
-        const pumpOutput = async () => {
-          while (true) {
-            const { done, value } = await transformReader.read()
-            if (done) break
-            controller.enqueue(value)
-          }
-          controller.close()
-        }
-
-        // Pipe input to transform
-        const pumpInput = async () => {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) {
-              await writer.close()
-              break
+      flush(controller) {
+        const trimmed = buffer.trim()
+        if (trimmed) {
+          try {
+            const json = JSON.parse(trimmed)
+            if (json.message?.content) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ content: json.message.content })}\n\n`)
+              )
             }
-            await writer.write(value)
+          } catch {
+            // ignore trailing partial
           }
         }
-
-        pumpOutput()
-        await pumpInput()
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       },
     })
 
-    return new Response(stream, {
+    return new Response(upstream.body.pipeThrough(transform), {
       headers: {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
         Connection: 'keep-alive',
       },
     })
   } catch (error) {
     console.error('Chat API error:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return jsonError('Internal server error', 500)
   }
 }

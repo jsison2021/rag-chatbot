@@ -282,7 +282,8 @@ export function ChatInterface() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        const errBody = await response.json().catch(() => null)
+        throw new Error(errBody?.error || `Request failed (${response.status})`)
       }
 
       const reader = response.body?.getReader()
@@ -355,7 +356,7 @@ export function ChatInterface() {
         const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: 'Sorry, an error occurred. Please try again.',
+          content: `Sorry, an error occurred: ${(error as Error).message}`,
         }
         setMessages((prev) => [...prev, errorMessage])
       }
@@ -445,7 +446,7 @@ export function ChatInterface() {
   const showSidebar = user || guestConversations.length > 0
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
+    <div className="flex h-screen bg-background text-foreground">
       {/* Desktop Sidebar */}
       {showSidebar && (
         <div className="hidden md:block">
@@ -465,7 +466,7 @@ export function ChatInterface() {
       {/* Mobile Sidebar */}
       {showSidebar && (
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetContent side="left" className="p-0 w-72 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+          <SheetContent side="left" className="p-0 w-[280px] bg-sidebar border-sidebar-border">
             <Sidebar
               conversations={displayConversations}
               currentConversationId={currentConversationId}
@@ -481,13 +482,13 @@ export function ChatInterface() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between px-3 sm:px-4 h-14 border-b border-border bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-1">
             {showSidebar && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                className="md:hidden text-muted-foreground hover:text-foreground"
                 onClick={() => setMobileMenuOpen(true)}
               >
                 <Menu className="h-5 w-5" />
@@ -500,27 +501,26 @@ export function ChatInterface() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <ThemeToggle />
-            {/* Auth buttons for guests */}
             {!user && (
               <>
-                <Link href="/login">
-                  <Button variant="ghost" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                    <LogIn className="h-4 w-4 mr-2" />
+                <Link href="/login" className="hidden sm:block">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                    <LogIn className="h-4 w-4 mr-1.5" />
                     Sign in
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
-                    <UserPlus className="h-4 w-4 mr-2" />
+                  <Button size="sm" className="rounded-full">
+                    <UserPlus className="h-4 w-4 mr-1.5" />
                     Sign up
                   </Button>
                 </Link>
               </>
             )}
           </div>
-        </div>
+        </header>
 
         {/* Messages */}
         <MessageList

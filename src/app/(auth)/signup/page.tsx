@@ -7,8 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare, Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, MailCheck } from 'lucide-react'
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('')
@@ -56,127 +55,100 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
-        <Card className="w-full max-w-md bg-white/80 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
-                <MessageSquare className="h-8 w-8 text-white" />
-              </div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="flex justify-center mb-5">
+            <div className="h-12 w-12 rounded-full bg-brand/10 flex items-center justify-center">
+              <MailCheck className="h-6 w-6 text-brand" />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Check your email</CardTitle>
-            <CardDescription className="text-gray-500 dark:text-gray-400">
-              We&apos;ve sent you a confirmation link to {email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              Click the link in the email to verify your account and start chatting.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              onClick={() => router.push('/login')}
-              variant="outline"
-              className="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              Back to login
-            </Button>
-          </CardFooter>
-        </Card>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            We&apos;ve sent a confirmation link to <span className="text-foreground">{email}</span>. Click it to verify your account.
+          </p>
+          <Button onClick={() => router.push('/login')} variant="outline" className="w-full h-11 mt-6">
+            Back to login
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 relative">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Link href="/chat" className="absolute top-4 left-4">
-        <Button variant="ghost" size="icon" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800">
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </Button>
       </Link>
-      <Card className="w-full max-w-md bg-white/80 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 backdrop-blur-sm">
-        <CardHeader className="space-y-3 text-center pb-2">
-          <div className="flex justify-center">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-              <MessageSquare className="h-8 w-8 text-white" />
+
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Sign up to start chatting</p>
+        </div>
+
+        <form onSubmit={handleSignUp} className="space-y-4">
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
+              {error}
             </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-11"
+            />
           </div>
-          <div className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create an account</CardTitle>
-            <CardDescription className="text-gray-500 dark:text-gray-400">
-              Sign up to start chatting with AI
-            </CardDescription>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="h-11"
+            />
           </div>
-        </CardHeader>
-        <form onSubmit={handleSignUp}>
-          <CardContent className="space-y-4 pt-2">
-            {error && (
-              <div className="p-3 text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                {error}
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="h-11"
+            />
+          </div>
+          <Button type="submit" disabled={loading} className="w-full h-11">
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              'Create account'
             )}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 dark:text-gray-200">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700 dark:text-gray-200">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-200">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pt-2">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create account'
-              )}
-            </Button>
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-medium">
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
+          </Button>
         </form>
-      </Card>
+
+        <p className="text-sm text-muted-foreground text-center mt-6">
+          Already have an account?{' '}
+          <Link href="/login" className="text-foreground font-medium hover:underline underline-offset-4">
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }
