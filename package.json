@@ -31,7 +31,6 @@
     "unpdf": "^1.4.0"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.15.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

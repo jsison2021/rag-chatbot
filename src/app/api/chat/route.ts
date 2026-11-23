@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-// Edge runtime streams reliably on Netlify/Vercel and has no ~10s serverless timeout.
+// Edge runtime streams reliably on Vercel and has no ~10s serverless timeout.
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
